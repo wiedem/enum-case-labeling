@@ -87,3 +87,30 @@ let values: Set<MyEnum> = [
 // This removes all enumeration values with the `intValue` label.
 let filtered = values.remove(.intValue)
 ```
+
+### Notes and Limitations
+
+#### Access Control
+If an enum declaration has a `public` access control specifier, the `CaseLabel` type and the `caseLabel` property are also declared as public.
+
+However, Swift macros cannot detect when an enum receives the access control of an extension:
+```swift
+public extension MyType {
+    @CaseLabeled
+    enum MyEnum {
+        case .intValue(Int)
+    }
+}
+```
+
+Such declarations lead to a compiler error, as `CaseLabel` and `caseLabel` are declared by the macro without access control and are therefore not public, unlike the enum itself.
+
+As a workaround, the access control should not be specified on public extensions, but always on the enum itself:
+```swift
+extension MyType {
+    @CaseLabeled
+    public enum MyEnum {
+        case .intValue(Int)
+    }
+}
+```
