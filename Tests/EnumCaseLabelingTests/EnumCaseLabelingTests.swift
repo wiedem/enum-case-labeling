@@ -31,11 +31,11 @@ final class EnumCaseLabelingTests: XCTestCase {
                 case intValue(Int)
                 case stringValue(string: String?)
             
-                enum CaseLabel: Hashable, CaseIterable, Sendable {
+                public enum CaseLabel: Hashable, CaseIterable, Sendable {
                     case `default`, simpleCase, intValue, stringValue
                 }
             
-                var caseLabel: CaseLabel {
+                public var caseLabel: CaseLabel {
                     switch self {
                     case .`default`:
                         .`default`
@@ -56,17 +56,17 @@ final class EnumCaseLabelingTests: XCTestCase {
         #endif
     }
 
-    func testPublicEnumExpansionUsesProperAccessLevel() throws {
+    func testPrivateEnumExpansionUsesProperAccessLevel() throws {
         #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
-            public enum MyEnum {
+            private enum MyEnum {
                 case intValue(Int)
             }
             """,
             expandedSource: """
-            public enum MyEnum {
+            private enum MyEnum {
                 case intValue(Int)
 
                 public enum CaseLabel: Hashable, CaseIterable, Sendable {

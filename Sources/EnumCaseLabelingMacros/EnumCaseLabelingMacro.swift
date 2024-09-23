@@ -1,31 +1,26 @@
 import SwiftCompilerPlugin
-import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-public struct EnumCaseLabelingMacro: MemberMacro {
-    public static func expansion(
-        of _: AttributeSyntax,
-        providingMembersOf declaration: some DeclGroupSyntax,
-        in _: some MacroExpansionContext
-    ) throws -> [DeclSyntax] {
+public enum EnumCaseLabelingMacro {
+    static let emitDiagnostics = false
+
+    static func getEnumCaseElements(
+        declaration: some DeclGroupSyntax,
+        in context: some MacroExpansionContext,
+        emitDiagnostics: Bool
+    ) -> ([EnumCaseElementSyntax], DeclModifierListSyntax)? {
         guard let enumDecl = declaration.as(EnumDeclSyntax.self) else {
-            return []
+            if emitDiagnostics {
+                context.diagnose(
+                    EnumCaseLabelingMacroDiagnostic.requiresEnum.diagnose(at: declaration)
+                )
+            }
+            return nil
         }
 
-        let isPublicEnum = enumDecl.modifiers.contains { modifier in
-            modifier.name.text == "public"
-        }
-
-        var labelModifiers: DeclModifierListSyntax = []
-        if isPublicEnum {
-            labelModifiers.append(
-                DeclModifierSyntax(name: .keyword(.public))
-            )
-        }
-
-        let caseElements = enumDecl.memberBlock.members
+        let enumCaseElements = enumDecl.memberBlock.members
             .compactMap { $0.decl.as(EnumCaseDeclSyntax.self) }
             .map {
                 $0.elements.map {
@@ -34,17 +29,27 @@ public struct EnumCaseLabelingMacro: MemberMacro {
             }
             .flatMap { $0 }
 
-        guard caseElements.isEmpty == false else {
-            return []
-        }
+        let labelModifiers = makeLabelModifierList(declaration: enumDecl)
 
-        // Create the CaseLabel declaration.
-        let enumCaseElementList = EnumCaseElementListSyntax.init {
+        return (enumCaseElements, labelModifiers)
+    }
+
+    static func makeLabelModifierList(declaration _: EnumDeclSyntax) -> DeclModifierListSyntax {
+        DeclModifierListSyntax {
+            DeclModifierSyntax(name: .keyword(.public))
+        }
+    }
+
+    static func makeCaseLabelEnumDecl(
+        caseElements: [EnumCaseElementSyntax],
+        declarationModifiers: DeclModifierListSyntax
+    ) -> EnumDeclSyntax {
+        let caseElementList = EnumCaseElementListSyntax {
             for element in caseElements {
                 element
             }
         }
-        let enumCase = EnumCaseDeclSyntax(elements: enumCaseElementList)
+        let enumCaseDecl = EnumCaseDeclSyntax(elements: caseElementList)
 
         let inheritanceTypeList = InheritedTypeListSyntax {
             InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("Hashable")))
@@ -52,14 +57,19 @@ public struct EnumCaseLabelingMacro: MemberMacro {
             InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("Sendable")))
         }
 
-        let labelEnumDecl = EnumDeclSyntax(
-            modifiers: labelModifiers,
+        return EnumDeclSyntax(
+            modifiers: declarationModifiers,
             name: .identifier("CaseLabel"),
             inheritanceClause: .init(inheritedTypes: inheritanceTypeList)
         ) {
-            enumCase
+            enumCaseDecl
         }
+    }
 
+    static func makeCaseLabelVarDecl(
+        caseElements: [EnumCaseElementSyntax],
+        declarationModifiers: DeclModifierListSyntax
+    ) -> VariableDeclSyntax {
         let labelCaseList = caseElements.map { enumCaseElement in
             SwitchCaseSyntax(
                 label: .case(.init(
@@ -81,9 +91,8 @@ public struct EnumCaseLabelingMacro: MemberMacro {
             )
         }
 
-        // Create the caseLabel var declaration.
-        let labelVarDecl = VariableDeclSyntax(
-            modifiers: labelModifiers,
+        return VariableDeclSyntax(
+            modifiers: declarationModifiers,
             bindingSpecifier: .keyword(.var),
             bindings: .init {
                 PatternBindingSyntax(
@@ -111,6 +120,38 @@ public struct EnumCaseLabelingMacro: MemberMacro {
                     )
                 )
             }
+        )
+    }
+}
+
+extension EnumCaseLabelingMacro: MemberMacro {
+    public static func expansion(
+        of _: AttributeSyntax,
+        providingMembersOf declaration: some DeclGroupSyntax,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        guard let (labelCaseElements, labelModifiers) = getEnumCaseElements(
+            declaration: declaration,
+            in: context,
+            emitDiagnostics: emitDiagnostics
+        ) else {
+            return []
+        }
+
+        guard labelCaseElements.isEmpty == false else {
+            return []
+        }
+
+        // Create the CaseLabel declaration.
+        let labelEnumDecl = makeCaseLabelEnumDecl(
+            caseElements: labelCaseElements,
+            declarationModifiers: labelModifiers
+        )
+
+        // Create the caseLabel var declaration.
+        let labelVarDecl = makeCaseLabelVarDecl(
+            caseElements: labelCaseElements,
+            declarationModifiers: labelModifiers
         )
 
         return [
