@@ -91,26 +91,16 @@ let filtered = values.remove(.intValue)
 ### Notes and Limitations
 
 #### Access Control
-If an enum declaration has a `public` access control specifier, the `CaseLabel` type and the `caseLabel` property are also declared as public.
+The added code for `CaseLabel` and `caseLabel` use a `public` access level even when the extended enum itself has a `private` access level.
 
-However, Swift macros cannot detect when an enum receives the access control of an extension:
+The automatically added protocol conformance to `CaseIterable` does not work if the enumeration is private and is itself declared in a private namespace.
+The following code will therefore not compile:
 ```swift
-public extension MyType {
+private extension Namespace {
     @CaseLabeled
-    enum MyEnum {
-        case .intValue(Int)
-    }
-}
-```
-
-Such declarations lead to a compiler error, as `CaseLabel` and `caseLabel` are declared by the macro without access control and are therefore not public, unlike the enum itself.
-
-As a workaround, the access control should not be specified on public extensions, but always on the enum itself:
-```swift
-extension MyType {
-    @CaseLabeled
-    public enum MyEnum {
-        case .intValue(Int)
+    private enum MyEnum: Hashable {
+        case intValue(Int)
+        case stringValue(string: String)
     }
 }
 ```
