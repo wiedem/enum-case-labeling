@@ -1,4 +1,5 @@
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
@@ -11,6 +12,17 @@ public struct EnumCaseLabelingMacro: MemberMacro {
     ) throws -> [DeclSyntax] {
         guard let enumDecl = declaration.as(EnumDeclSyntax.self) else {
             return []
+        }
+
+        let isPublicEnum = enumDecl.modifiers.contains { modifier in
+            modifier.name.text == "public"
+        }
+
+        var labelModifiers: DeclModifierListSyntax = []
+        if isPublicEnum {
+            labelModifiers.append(
+                DeclModifierSyntax(name: .keyword(.public))
+            )
         }
 
         let caseElements = enumDecl.memberBlock.members
@@ -41,6 +53,7 @@ public struct EnumCaseLabelingMacro: MemberMacro {
         }
 
         let labelEnumDecl = EnumDeclSyntax(
+            modifiers: labelModifiers,
             name: .identifier("CaseLabel"),
             inheritanceClause: .init(inheritedTypes: inheritanceTypeList)
         ) {
@@ -70,6 +83,7 @@ public struct EnumCaseLabelingMacro: MemberMacro {
 
         // Create the caseLabel var declaration.
         let labelVarDecl = VariableDeclSyntax(
+            modifiers: labelModifiers,
             bindingSpecifier: .keyword(.var),
             bindings: .init {
                 PatternBindingSyntax(

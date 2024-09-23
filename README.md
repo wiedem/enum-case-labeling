@@ -16,7 +16,7 @@ Include `"EnumCaseLabeling"` as a dependency for your executable target:
 
 ```swift
 dependencies: [
-    .product(name: "EnumCaseLabeling", package: "EnumCaseLabeling"),
+    .product(name: "EnumCaseLabeling", package: "enum-case-labeling"),
 ]
 ```
 

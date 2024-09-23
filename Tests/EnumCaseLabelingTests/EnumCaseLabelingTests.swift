@@ -30,11 +30,11 @@ final class EnumCaseLabelingTests: XCTestCase {
                 case `default`, simpleCase
                 case intValue(Int)
                 case stringValue(string: String?)
-
+            
                 enum CaseLabel: Hashable, CaseIterable, Sendable {
                     case `default`, simpleCase, intValue, stringValue
                 }
-
+            
                 var caseLabel: CaseLabel {
                     switch self {
                     case .`default`:
@@ -45,6 +45,38 @@ final class EnumCaseLabelingTests: XCTestCase {
                         .intValue
                     case .stringValue:
                         .stringValue
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+
+    func testPublicEnumExpansionUsesProperAccessLevel() throws {
+        #if canImport(EnumCaseLabelingMacros)
+        assertMacroExpansion(
+            """
+            @CaseLabeled
+            public enum MyEnum {
+                case intValue(Int)
+            }
+            """,
+            expandedSource: """
+            public enum MyEnum {
+                case intValue(Int)
+
+                public enum CaseLabel: Hashable, CaseIterable, Sendable {
+                    case intValue
+                }
+
+                public var caseLabel: CaseLabel {
+                    switch self {
+                    case .intValue:
+                        .intValue
                     }
                 }
             }
