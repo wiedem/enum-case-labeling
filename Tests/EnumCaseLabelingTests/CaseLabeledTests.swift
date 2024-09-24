@@ -2,7 +2,7 @@ import EnumCaseLabeling
 import XCTest
 
 @CaseLabeled
-private enum MyEnum {
+private enum MyEnum: Hashable, Sendable {
     case simpleCase
     case intValue(Int)
     case stringValue(string: String?)

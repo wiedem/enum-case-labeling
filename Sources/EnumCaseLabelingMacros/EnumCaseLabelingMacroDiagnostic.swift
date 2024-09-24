@@ -3,6 +3,7 @@ import SwiftSyntax
 
 enum EnumCaseLabelingMacroDiagnostic {
     case requiresEnum
+    case debug(String)
 }
 
 extension EnumCaseLabelingMacroDiagnostic: DiagnosticMessage {
@@ -14,10 +15,19 @@ extension EnumCaseLabelingMacroDiagnostic: DiagnosticMessage {
         switch self {
         case .requiresEnum:
             "'CaseLabeled' macro can only be applied to an enum"
+        case let .debug(message):
+            "'CaseLabeled' macro debug: \(message)"
         }
     }
 
-    var severity: DiagnosticSeverity { .error }
+    var severity: DiagnosticSeverity {
+        switch self {
+        case .requiresEnum:
+            .error
+        case .debug:
+            .note
+        }
+    }
 
     var diagnosticID: MessageID {
         MessageID(domain: "Swift", id: "CaseLabeled.\(self)")
