@@ -1,34 +1,49 @@
-import SwiftSyntaxMacros
-import SwiftSyntaxMacrosTestSupport
+import SwiftSyntaxMacroExpansion
+import SwiftSyntaxMacrosGenericTestSupport
 import Testing
 
 #if canImport(EnumCaseLabelingMacros)
 import EnumCaseLabelingMacros
 
-private var testMacros: [String: Macro.Type] {
-    ["CaseLabeled": EnumCaseLabelingMacro.self]
+private let isMacroAvailable = true
+
+private extension EnumCaseLabelingTests {
+    static var testMacros: [String: MacroSpec] {
+        ["CaseLabeled": MacroSpec(type: EnumCaseLabelingMacro.self)]
+    }
+}
+
+#else
+private let isMacroAvailable = false
+
+private extension EnumCaseLabelingTests {
+    static var testMacros: [String: MacroSpec] {
+        [:]
+    }
 }
 #endif
 
-@Suite("CaseLabeled Macro Expansion")
+@Suite(
+    "CaseLabeled Macro Expansion",
+    .enabled(if: isMacroAvailable, "Macro plugin module EnumCaseLabelingMacros is not available")
+)
 struct EnumCaseLabelingTests {
     @Test("Generates CaseLabel enum and caseLabel property for enum with mixed cases")
     func mixedCases() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
             enum MyEnum: Equatable, Sendable {
                 case `default`, simpleCase
                 case intValue(Int)
-                case stringValue(string: String?)
+                case stringValue(source: String?)
             }
             """,
             expandedSource: """
             enum MyEnum: Equatable, Sendable {
                 case `default`, simpleCase
                 case intValue(Int)
-                case stringValue(string: String?)
+                case stringValue(source: String?)
 
                 enum CaseLabel: Hashable, CaseIterable, Sendable {
                     case `default`, simpleCase
@@ -50,14 +65,12 @@ struct EnumCaseLabelingTests {
                 }
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Generates labels for enum with only simple cases and emits warning")
     func onlySimpleCases() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -98,14 +111,12 @@ struct EnumCaseLabelingTests {
                     severity: .warning
                 ),
             ],
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Omits access modifier for private enum members")
     func privateEnum() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -129,14 +140,12 @@ struct EnumCaseLabelingTests {
                 }
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Uses public access level for public enum members")
     func publicEnum() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -160,14 +169,12 @@ struct EnumCaseLabelingTests {
                 }
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Uses package access level for package enum members")
     func packageEnum() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -191,14 +198,45 @@ struct EnumCaseLabelingTests {
                 }
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
+    }
+
+    @Test("Inherits public access level from enclosing public extension")
+    func publicExtensionEnum() {
+        assertMacroExpansion(
+            """
+            public extension SomeType {
+                @CaseLabeled
+                enum MyEnum {
+                    case intValue(Int)
+                }
+            }
+            """,
+            expandedSource: """
+            public extension SomeType {
+                enum MyEnum {
+                    case intValue(Int)
+
+                    public enum CaseLabel: Hashable, CaseIterable, Sendable {
+                        case intValue
+                    }
+
+                    public var caseLabel: CaseLabel {
+                        switch self {
+                        case .intValue:
+                            .intValue
+                        }
+                    }
+                }
+            }
+            """,
+            macroSpecs: Self.testMacros
+        )
     }
 
     @Test("Emits error diagnostic when applied to a struct")
     func appliedToStruct() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -218,14 +256,12 @@ struct EnumCaseLabelingTests {
                     column: 1
                 ),
             ],
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Produces empty expansion for enum without cases")
     func emptyEnum() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -236,14 +272,12 @@ struct EnumCaseLabelingTests {
             enum EmptyEnum {
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Preserves @available attributes on case labels")
     func availableAttribute() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -261,8 +295,7 @@ struct EnumCaseLabelingTests {
 
                 enum CaseLabel: Hashable, CaseIterable, Sendable {
                     case basic
-                    @available(iOS 17, *)
-                    case advanced
+                        @available(iOS 17, *) case advanced
                 }
 
                 var caseLabel: CaseLabel {
@@ -275,14 +308,12 @@ struct EnumCaseLabelingTests {
                 }
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Generates CaseLabel with #if conditional compilation block")
     func ifConfigBlock() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -302,7 +333,7 @@ struct EnumCaseLabelingTests {
 
                 enum CaseLabel: Hashable, CaseIterable, Sendable {
                     case basic
-                    #if DEBUG
+                        #if DEBUG
                     case debugOnly
                     #endif
                 }
@@ -311,7 +342,7 @@ struct EnumCaseLabelingTests {
                     switch self {
                     case .basic:
                         .basic
-                    #if DEBUG
+                        #if DEBUG
                     case .debugOnly:
                         .debugOnly
                     #endif
@@ -319,14 +350,12 @@ struct EnumCaseLabelingTests {
                 }
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Generates CaseLabel with #if/#else conditional compilation block")
     func ifElseConfigBlock() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -350,9 +379,9 @@ struct EnumCaseLabelingTests {
 
                 enum CaseLabel: Hashable, CaseIterable, Sendable {
                     case common
-                    #if os(iOS)
+                        #if os(iOS)
                     case iosOnly
-                    #else
+                        #else
                     case otherPlatform
                     #endif
                 }
@@ -361,10 +390,10 @@ struct EnumCaseLabelingTests {
                     switch self {
                     case .common:
                         .common
-                    #if os(iOS)
+                        #if os(iOS)
                     case .iosOnly:
                         .iosOnly
-                    #else
+                        #else
                     case .otherPlatform:
                         .otherPlatform
                     #endif
@@ -372,14 +401,12 @@ struct EnumCaseLabelingTests {
                 }
             }
             """,
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 
     @Test("Emits warning when no case has associated values")
     func noAssociatedValuesWarning() {
-        #if canImport(EnumCaseLabelingMacros)
         assertMacroExpansion(
             """
             @CaseLabeled
@@ -416,8 +443,7 @@ struct EnumCaseLabelingTests {
                     severity: .warning
                 ),
             ],
-            macros: testMacros
+            macroSpecs: Self.testMacros
         )
-        #endif
     }
 }

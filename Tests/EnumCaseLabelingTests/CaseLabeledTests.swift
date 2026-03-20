@@ -131,7 +131,7 @@ private enum TestEnum: Hashable, Sendable {
 
 // MARK: - Nested enum scenarios for access level verification
 
-public struct ContainerWithPublicEnum {
+public enum ContainerWithPublicEnum {
     @CaseLabeled
     public enum Nested {
         case a(Int)
@@ -144,7 +144,7 @@ public struct ContainerWithPublicEnum {
     }
 }
 
-private struct ContainerWithPrivateEnum {
+private enum ContainerWithPrivateEnum {
     @CaseLabeled
     private enum Nested: CaseLabeled {
         case a(Int)
@@ -163,7 +163,7 @@ private struct ContainerWithPrivateEnum {
     }
 }
 
-private struct ContainerWithInternalEnum {
+private enum ContainerWithInternalEnum {
     @CaseLabeled
     enum Nested {
         case a(Int)

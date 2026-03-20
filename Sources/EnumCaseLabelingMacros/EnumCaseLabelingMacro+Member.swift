@@ -74,7 +74,7 @@ extension EnumCaseLabelingMacro {
             )
         }
 
-        let labelModifiers = makeLabelModifierList(declaration: enumDecl)
+        let labelModifiers = makeLabelModifierList(declaration: enumDecl, in: context)
 
         return (caseLabelMembers, labelModifiers)
     }
@@ -149,8 +149,13 @@ extension EnumCaseLabelingMacro {
 // MARK: - Access Modifiers
 
 extension EnumCaseLabelingMacro {
-    static func makeLabelModifierList(declaration: EnumDeclSyntax) -> DeclModifierListSyntax {
+    static func makeLabelModifierList(
+        declaration: EnumDeclSyntax,
+        in context: some MacroExpansionContext
+    ) -> DeclModifierListSyntax {
         let accessKeywords: [Keyword] = [.public, .package]
+
+        // Check the enum's own modifiers first
         for modifier in declaration.modifiers {
             if case let .keyword(keyword) = modifier.name.tokenKind,
                accessKeywords.contains(keyword)
@@ -160,6 +165,22 @@ extension EnumCaseLabelingMacro {
                 }
             }
         }
+
+        // Check enclosing lexical context for access modifiers (e.g. public extension)
+        for syntax in context.lexicalContext {
+            if let extensionDecl = syntax.as(ExtensionDeclSyntax.self) {
+                for modifier in extensionDecl.modifiers {
+                    if case let .keyword(keyword) = modifier.name.tokenKind,
+                       accessKeywords.contains(keyword)
+                    {
+                        return DeclModifierListSyntax {
+                            DeclModifierSyntax(name: .keyword(keyword))
+                        }
+                    }
+                }
+            }
+        }
+
         return DeclModifierListSyntax {}
     }
 }

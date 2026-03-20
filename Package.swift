@@ -45,7 +45,8 @@ let package = Package(
             dependencies: [
                 "EnumCaseLabeling",
                 "EnumCaseLabelingMacros",
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacroExpansion", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacrosGenericTestSupport", package: "swift-syntax"),
             ],
             swiftSettings: defaultSwiftSettings
         ),
