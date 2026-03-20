@@ -1,11 +1,22 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 
 import CompilerPluginSupport
 import PackageDescription
 
+let defaultSwiftSettings: [SwiftSetting] = [
+    .swiftLanguageMode(.v6),
+]
+
 let package = Package(
     name: "EnumCaseLabeling",
-    platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .watchOS(.v6), .macCatalyst(.v13)],
+    platforms: [
+        .macOS(.v13),
+        .iOS(.v16),
+        .tvOS(.v16),
+        .watchOS(.v9),
+        .macCatalyst(.v16),
+        .visionOS(.v1),
+    ],
     products: [
         .library(
             name: "EnumCaseLabeling",
@@ -13,7 +24,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-syntax.git", from: "510.0.0"),
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "600.0.0"),
     ],
     targets: [
         .macro(
@@ -21,18 +32,22 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
-
-        .target(name: "EnumCaseLabeling", dependencies: ["EnumCaseLabelingMacros"]),
-
+        .target(
+            name: "EnumCaseLabeling",
+            dependencies: ["EnumCaseLabelingMacros"],
+            swiftSettings: defaultSwiftSettings
+        ),
         .testTarget(
             name: "EnumCaseLabelingTests",
             dependencies: [
                 "EnumCaseLabeling",
                 "EnumCaseLabelingMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
     ]
 )

@@ -14,36 +14,16 @@ extension EnumCaseLabelingMacro: ExtensionMacro {
         }
 
         return makeExtensionDeclList(
-            declaration: declaration,
             extensionsOf: type,
-            protocols: protocols,
-            context: context
+            protocols: protocols
         )
     }
 }
 
 extension EnumCaseLabelingMacro {
-    static func makeDefaultExtensionDeclList(
-        extensionsOf type: some TypeSyntaxProtocol
-    ) -> [ExtensionDeclSyntax] {
-        let extensionDecl = ExtensionDeclSyntax(
-            extendedType: type,
-            inheritanceClause: .init(
-                inheritedTypes: .init {
-                    InheritedTypeSyntax(
-                        type: IdentifierTypeSyntax(name: .identifier("CaseLabeled"))
-                    )
-                }
-            )
-        ) {}
-        return [extensionDecl]
-    }
-
     static func makeExtensionDeclList(
-        declaration: some DeclGroupSyntax,
         extensionsOf type: some TypeSyntaxProtocol,
-        protocols: [TypeSyntax],
-        context: some MacroExpansionContext
+        protocols: [TypeSyntax]
     ) -> [ExtensionDeclSyntax] {
         let extensionDecl = ExtensionDeclSyntax(
             extendedType: type,

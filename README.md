@@ -1,31 +1,17 @@
 # EnumCaseLabeling
 
-**EnumCaseLabeling** is an open source package providing macros and types to extend enumerations having cases with associated values.
+[![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
+[![Platforms](https://img.shields.io/badge/Platforms-iOS%2016%20%7C%20macOS%2013%20%7C%20tvOS%2016%20%7C%20watchOS%209%20%7C%20visionOS%201-blue.svg)](https://developer.apple.com)
+[![Swift Package Manager](https://img.shields.io/badge/SPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 
-## Getting Started
-
-Swift 5.10 is required as a minimum version.
-
-To use the `EnumCaseLabeling` library in a SwiftPM project, add the following line to the dependencies in your `Package.swift` file:
-
-```swift
-.package(url: "https://github.com/wiedem/enum-case-labeling", .upToNextMajor(from: "1.0.0")),
-```
-
-Include `"EnumCaseLabeling"` as a dependency for your executable target:
-
-```swift
-dependencies: [
-    .product(name: "EnumCaseLabeling", package: "enum-case-labeling"),
-]
-```
+A Swift macro package that generates case labels for enumerations with associated values. Case labels allow comparing enum cases by their label, ignoring associated values.
 
 ## Usage
 
-Start by importing the module into your Swift code with `import EnumCaseLabeling`.
+### The `@CaseLabeled` Macro
 
-### Extend Enumerations with the `CaseLabeled` Macro
-Apply the macro `CaseLabeled` to your enumeration:
+Apply the `@CaseLabeled` macro to an enumeration to generate a nested `CaseLabel` enum and a `caseLabel` property:
 
 ```swift
 @CaseLabeled
@@ -35,32 +21,33 @@ enum MyEnum: Equatable {
 }
 ```
 
-The macro automatically declares a `CaseLabel` enumeration conforming to the `Equatable` protocol without associated values.
-A `caseLabel` property returns a value of `CaseLabel` for each case of the enumeration.
+The generated `CaseLabel` enum mirrors the cases of the original enum without associated values and conforms to `Hashable`, `CaseIterable`, and `Sendable`. The `caseLabel` property returns the matching `CaseLabel` for each case.
 
-### Using Case Labels
-Case labels of enumeration values can be used to identify values with an identical label, even if their associated values are not identical:
+### Comparing Case Labels
+
+Case labels can identify values with the same case, even if their associated values differ.
+
+The `~~` operator and the `hasSameLabel(as:)` method compare two values by their case label:
+
 ```swift
 let value1: MyEnum = .intValue(1)
 let value2: MyEnum = .intValue(2)
 
-// value1 and value2 are not equal because their associated values are not equal ...
-print("value1 and value2 are equal: \(value1 == value2)")
-// ... but they share a common case label
-print("value1 and value2 have a common case label: \(value1.caseLabel == value2.caseLabel)")
+value1 == value2                      // false - different associated values
+value1 ~~ value2                      // true - same case label
+value1.hasSameLabel(as: value2)       // true - same case label
 ```
 
-The `CaseLabeled` protocol also provides a convenience operator `~=` for the label comparison:
+Enum values can also be compared directly with `CaseLabel` values using `~=`:
+
 ```swift
-print("value1 and value2 have a common case label: \(value1 ~= value2)")
+value1 ~= .intValue     // true
+value1 ~= .stringValue  // false
 ```
 
-Enumeration values can also be directly compared with case label values:
-```swift
-print("value1 is an 'intValue': \(value1 ~= .intValue)")
-```
+### Extending Collections
 
-This makes it possible, for example, to easily extend collections with methods that make use of the labels:
+Case labels work well with generic constraints on `CaseLabeled`:
 
 ```swift
 @CaseLabeled
@@ -70,10 +57,8 @@ enum MyEnum: Hashable {
 }
 
 extension Set where Element: CaseLabeled {
-    func remove(_ labeled: Element.CaseLabel) -> Self {
-        filter {
-            $0.caseLabel != labeled
-        }
+    func removing(_ labeled: Element.CaseLabel) -> Self {
+        filter { $0.caseLabel != labeled }
     }
 }
 
@@ -84,23 +69,74 @@ let values: Set<MyEnum> = [
     .stringValue(string: "Text2"),
 ]
 
-// This removes all enumeration values with the `intValue` label.
-let filtered = values.remove(.intValue)
+let filtered = values.removing(.intValue)
+// Only stringValue cases remain
 ```
 
-### Notes and Limitations
+## Limitations
 
-#### Access Control
-The added code for `CaseLabel` and `caseLabel` use a `public` access level even when the extended enum itself has a `private` access level.
+The `@CaseLabeled` macro cannot be used on `private` enums nested inside another type. The macro generates a protocol conformance extension at file scope, where a truly `private` nested type is not visible. The following code will not compile:
 
-The automatically added protocol conformance to `CaseIterable` does not work if the enumeration is private and is itself declared in a private namespace.
-The following code will therefore not compile:
 ```swift
-private extension Namespace {
+struct Container {
     @CaseLabeled
-    private enum MyEnum: Hashable {
+    private enum MyEnum {
         case intValue(Int)
         case stringValue(string: String)
     }
 }
 ```
+
+The same applies to enums in `private` extensions:
+
+```swift
+private extension Namespace {
+    @CaseLabeled
+    enum MyEnum {
+        case intValue(Int)
+        case stringValue(string: String)
+    }
+}
+```
+
+As a workaround, you can declare the `CaseLabeled` conformance directly on the enum. The macro detects the existing conformance and skips generating the extension:
+
+```swift
+struct Container {
+    @CaseLabeled
+    private enum MyEnum: CaseLabeled {
+        case intValue(Int)
+        case stringValue(string: String)
+    }
+}
+```
+
+## Requirements
+
+- Swift 6.0+
+- macOS 13+, iOS 16+, tvOS 16+, watchOS 9+, visionOS 1+
+
+## Installation
+
+Add the package dependency to your `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/wiedem/enum-case-labeling", .upToNextMajor(from: "1.0.0")),
+]
+```
+
+Then add `"EnumCaseLabeling"` to your target's dependencies:
+
+```swift
+.target(
+    name: "YourTarget",
+    dependencies: [
+        .product(name: "EnumCaseLabeling", package: "enum-case-labeling"),
+    ]
+)
+```
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE.txt) file for details.

@@ -3,7 +3,7 @@ import SwiftSyntax
 
 enum EnumCaseLabelingMacroDiagnostic {
     case requiresEnum
-    case debug(String)
+    case noAssociatedValues
 }
 
 extension EnumCaseLabelingMacroDiagnostic: DiagnosticMessage {
@@ -15,8 +15,8 @@ extension EnumCaseLabelingMacroDiagnostic: DiagnosticMessage {
         switch self {
         case .requiresEnum:
             "'CaseLabeled' macro can only be applied to an enum"
-        case let .debug(message):
-            "'CaseLabeled' macro debug: \(message)"
+        case .noAssociatedValues:
+            "'CaseLabeled' macro is redundant on enums where no case has associated values"
         }
     }
 
@@ -24,12 +24,12 @@ extension EnumCaseLabelingMacroDiagnostic: DiagnosticMessage {
         switch self {
         case .requiresEnum:
             .error
-        case .debug:
-            .note
+        case .noAssociatedValues:
+            .warning
         }
     }
 
     var diagnosticID: MessageID {
-        MessageID(domain: "Swift", id: "CaseLabeled.\(self)")
+        MessageID(domain: "EnumCaseLabeling", id: "CaseLabeled.\(self)")
     }
 }

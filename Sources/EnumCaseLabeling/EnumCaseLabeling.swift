@@ -13,6 +13,9 @@
 ///     case stringValue(string: String?)
 /// }
 /// ```
-@attached(member, names: arbitrary)
+@attached(member, names: named(CaseLabel), named(caseLabel))
 @attached(extension, conformances: CaseLabeled)
-public macro CaseLabeled() = #externalMacro(module: "EnumCaseLabelingMacros", type: "EnumCaseLabelingMacro")
+public macro CaseLabeled() = #externalMacro(
+    module: "EnumCaseLabelingMacros",
+    type: "EnumCaseLabelingMacro"
+)

@@ -1,9 +1,7 @@
 import SwiftCompilerPlugin
 import SwiftSyntaxMacros
 
-public enum EnumCaseLabelingMacro {
-    static let emitDiagnostics = false
-}
+public enum EnumCaseLabelingMacro {}
 
 @main
 struct EnumCaseLabelingPlugin: CompilerPlugin {
